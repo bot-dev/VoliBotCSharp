@@ -162,6 +162,7 @@ namespace LoLLauncher
     {
         NORMAL_5x5 = 2,
         NORMAL_3x3 = 8,
+        DOMINION = 16,
         INTRO_BOT = 31,
         BEGINNER_BOT = 32,
         MEDIUM_BOT = 33,

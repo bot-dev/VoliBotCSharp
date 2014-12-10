@@ -1,1 +1,12 @@
-tagal47|Epoch123|MEDIUM_BOT
+ChainsawDynasty|usethis1|MEDIUM_BOT
+fibseven|usethis1|MEDIUM_BOT
+fibeight|usethis1|MEDIUM_BOT
+fibfive|usethis1|MEDIUM_BOT
+fibsix|usethis1|MEDIUM_BOT
+fibnine|usethis1|MEDIUM_BOT
+fibten|usethis1|MEDIUM_BOT
+fibone|usethis1|MEDIUM_BOT
+fibtwo|usethis1|MEDIUM_BOT
+laughin3|S0L3B0r3m0e2|DOMINION
+fibthree|usethis1|MEDIUM_BOT
+fibfour|usethis1|MEDIUM_BOT

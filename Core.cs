@@ -34,7 +34,7 @@ namespace RitoBot
         public static bool rndSpell = true;
         public static string spell1 = "flash";
         public static string spell2 = "ignite";
-        public static bool isDonator = true;
+        public static bool isDonator = false;
 
         public static int accountIndex = 0;
 
@@ -72,12 +72,12 @@ namespace RitoBot
                         if (result[2] != null)
                         {
                             QueueTypes queuetype = (QueueTypes)System.Enum.Parse(typeof(QueueTypes), result[2]);
-                            VoliBot ritoBot = new VoliBot(result[0], result[1], Region, Path2, curRunning, queuetype);
+                            VoliBot ritoBot = null;// new VoliBot(result[0], result[1], Region, Path2, curRunning, queuetype);
                         }
                         else
                         {
                             QueueTypes queuetype = QueueTypes.ARAM;
-                            VoliBot ritoBot = new VoliBot(result[0], result[1], Region, Path2, curRunning, queuetype);
+                            VoliBot ritoBot = null; //new VoliBot(result[0], result[1], Region, Path2, curRunning, queuetype);
                         }
                         Console.Title = " Current Connected: " + connectedAccs;
                         if (curRunning == maxBots)
@@ -87,6 +87,8 @@ namespace RitoBot
                     {
                         Console.WriteLine("CountAccError: You may have an issue in your accounts.txt");
                     }
+
+                    System.Threading.Thread.Sleep(20 * 1000);
                 }
             Console.ReadKey();
         }
@@ -108,10 +110,10 @@ namespace RitoBot
                 if(result[2] != null)
                 {
                     QueueTypes queuetype = (QueueTypes)System.Enum.Parse(typeof(QueueTypes), result[2]);
-                    VoliBot ritoBot = new VoliBot(result[0], result[1], Region, Path2, curRunning, queuetype);
+                    VoliBot ritoBot = null;// new VoliBot(result[0], result[1], Region, Path2, curRunning, queuetype);
                 } else {
                     QueueTypes queuetype = QueueTypes.ARAM;
-                    VoliBot ritoBot = new VoliBot(result[0], result[1], Region, Path2, curRunning, queuetype);
+                    VoliBot ritoBot = null;//new VoliBot(result[0], result[1], Region, Path2, curRunning, queuetype);
                 }
                 Console.Title = " Current Connected: " + connectedAccs;
                 if (curRunning == maxBots)

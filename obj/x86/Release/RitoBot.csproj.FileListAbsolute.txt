@@ -17,3 +17,12 @@ C:\Users\Sahin\Desktop\TEMP_NAME_2\ARAM\obj\x86\Release\RitoBot.Properties.Resou
 C:\Users\Sahin\Desktop\TEMP_NAME_2\ARAM\obj\x86\Release\RitoBot.csproj.GenerateResource.Cache
 C:\Users\Sahin\Desktop\TEMP_NAME_2\ARAM\obj\x86\Release\RitoBot.donate.resources
 C:\Users\Sahin\Desktop\TEMP_NAME_2\ARAM\obj\x86\Release\RitoBot.csprojResolveAssemblyReference.cache
+C:\Users\jasteph\Documents\GitHub\Bot4U\VoliBotCSharp\bin\Release\RitoBot.exe.config
+C:\Users\jasteph\Documents\GitHub\Bot4U\VoliBotCSharp\bin\Release\RitoBot.exe
+C:\Users\jasteph\Documents\GitHub\Bot4U\VoliBotCSharp\bin\Release\RitoBot.pdb
+C:\Users\jasteph\Documents\GitHub\Bot4U\VoliBotCSharp\obj\x86\Release\RitoBot.csprojResolveAssemblyReference.cache
+C:\Users\jasteph\Documents\GitHub\Bot4U\VoliBotCSharp\obj\x86\Release\RitoBot.donate.resources
+C:\Users\jasteph\Documents\GitHub\Bot4U\VoliBotCSharp\obj\x86\Release\RitoBot.Properties.Resources.resources
+C:\Users\jasteph\Documents\GitHub\Bot4U\VoliBotCSharp\obj\x86\Release\RitoBot.csproj.GenerateResource.Cache
+C:\Users\jasteph\Documents\GitHub\Bot4U\VoliBotCSharp\obj\x86\Release\RitoBot.exe
+C:\Users\jasteph\Documents\GitHub\Bot4U\VoliBotCSharp\obj\x86\Release\RitoBot.pdb

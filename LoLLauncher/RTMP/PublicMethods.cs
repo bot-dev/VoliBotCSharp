@@ -136,7 +136,7 @@ namespace LoLLauncher
             results.Remove(Id);
             return result;
         }
-
+        
 
         /// 5.)
         public void GetSummonerRuneInventory(Double summonerId, SummonerRuneInventory.Callback callback)

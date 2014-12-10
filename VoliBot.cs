@@ -39,8 +39,107 @@ using System.Runtime.CompilerServices;
 
 namespace RitoBot
 {
-    internal class VoliBot
+    enum ShowWindowCommands
     {
+        /// <summary>
+        /// Hides the window and activates another window.
+        /// </summary>
+        Hide = 0,
+        /// <summary>
+        /// Activates and displays a window. If the window is minimized or
+        /// maximized, the system restores it to its original size and position.
+        /// An application should specify this flag when displaying the window
+        /// for the first time.
+        /// </summary>
+        Normal = 1,
+        /// <summary>
+        /// Activates the window and displays it as a minimized window.
+        /// </summary>
+        ShowMinimized = 2,
+        /// <summary>
+        /// Maximizes the specified window.
+        /// </summary>
+        Maximize = 3, // is this the right value?
+        /// <summary>
+        /// Activates the window and displays it as a maximized window.
+        /// </summary>      
+        ShowMaximized = 3,
+        /// <summary>
+        /// Displays a window in its most recent size and position. This value
+        /// is similar to <see cref="Win32.ShowWindowCommand.Normal"/>, except
+        /// the window is not activated.
+        /// </summary>
+        ShowNoActivate = 4,
+        /// <summary>
+        /// Activates the window and displays it in its current size and position.
+        /// </summary>
+        Show = 5,
+        /// <summary>
+        /// Minimizes the specified window and activates the next top-level
+        /// window in the Z order.
+        /// </summary>
+        Minimize = 6,
+        /// <summary>
+        /// Displays the window as a minimized window. This value is similar to
+        /// <see cref="Win32.ShowWindowCommand.ShowMinimized"/>, except the
+        /// window is not activated.
+        /// </summary>
+        ShowMinNoActive = 7,
+        /// <summary>
+        /// Displays the window in its current size and position. This value is
+        /// similar to <see cref="Win32.ShowWindowCommand.Show"/>, except the
+        /// window is not activated.
+        /// </summary>
+        ShowNA = 8,
+        /// <summary>
+        /// Activates and displays the window. If the window is minimized or
+        /// maximized, the system restores it to its original size and position.
+        /// An application should specify this flag when restoring a minimized window.
+        /// </summary>
+        Restore = 9,
+        /// <summary>
+        /// Sets the show state based on the SW_* value specified in the
+        /// STARTUPINFO structure passed to the CreateProcess function by the
+        /// program that started the application.
+        /// </summary>
+        ShowDefault = 10,
+        /// <summary>
+        ///  <b>Windows 2000/XP:</b> Minimizes a window, even if the thread
+        /// that owns the window is not responding. This flag should only be
+        /// used when minimizing windows from a different thread.
+        /// </summary>
+        ForceMinimize = 11
+    }
+
+    public class UpdateChangedEventArgs : EventArgs
+    {
+        public string Update { get; set; }
+    }
+
+    public class LevelChangedEventArgs : EventArgs
+    {
+        public int Level { get; set; }
+    }
+
+    public class GameLaunchedEventArgs : EventArgs
+    {
+        public string UserName { get; set; }
+    }
+
+    public class ExperienceLaunchedEventArgs : EventArgs
+    {
+        public int Experience { get; set; }
+    }
+
+    public class VoliBot
+    {
+        private int[] XP_PER_LEVEL =
+           new int[] { 0, 90, 188, 293, 406, 854, 1330,
+               1834, 2366, 3976, 5076, 6226, 7426, 8676,
+               9976, 11326, 12726, 14176, 15676, 17807,
+               20007, 22276, 24614, 27020, 29495, 32039,
+               34652, 37333, 40084 };
+
         public Process exeProcess;
         public GameDTO currentGame = new GameDTO();
         public ChampionDTO[] availableChampsArray;
@@ -48,6 +147,7 @@ namespace RitoBot
         public LoLConnection connection = new LoLConnection();
         public List<ChampionDTO> availableChamps = new List<ChampionDTO>();
 
+        private double _sumLevel;
         public bool firstTimeInLobby = true;
         public bool firstTimeInQueuePop = true;
         public bool firstTimeInCustom = true;
@@ -58,22 +158,100 @@ namespace RitoBot
         public string ipath;
         public string regiona;
 
-        public int threadID;
-        public double sumLevel { get; set; }
+        public delegate void LevelChangedEventHandler(LevelChangedEventArgs e);
+
+        public event LevelChangedEventHandler LevelChanged;
+
+        public delegate void ExperienceLaunchedEventHandler(ExperienceLaunchedEventArgs e);
+
+        public event ExperienceLaunchedEventHandler ExperienceLaunched;
+
+        public double sumLevel
+        {
+            get
+            {
+                return _sumLevel;
+            }
+            set
+            {
+                if(_sumLevel != value)
+                {
+                    _sumLevel = value;
+                    LevelChanged(new LevelChangedEventArgs() { Level = (int)_sumLevel });
+                }
+            }
+        }
         public double archiveSumLevel { get; set; }
         public double rpBalance { get; set; }
 
-        public QueueTypes queueType { get; set; }
-        public QueueTypes actualQueueType { get; set; }
+        public string Status { get; set; }
 
         [DllImport("user32.dll", SetLastError = true)]
         static extern IntPtr SetParent(IntPtr hWndChild, IntPtr hWndNewParent);
         [DllImport("user32.dll", SetLastError = true)]
         internal static extern bool MoveWindow(IntPtr hWnd, int X, int Y, int nWidth, int nHeight, bool bRepaint);
-
-        public VoliBot(string username, string password, string region, string path, int threadid, QueueTypes QueueType)
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool ShowWindow(IntPtr hWnd, ShowWindowCommands nCmdShow);
+        [DllImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool GetWindowRect(IntPtr hWnd, ref RECT lpRect);
+        [StructLayout(LayoutKind.Sequential)]
+        private struct RECT
         {
-            ipath = path; Accountname = username; Password = password; threadID = threadid; queueType = QueueType;
+            public int Left;
+            public int Top;
+            public int Right;
+            public int Bottom;
+        }
+        private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        private static extern int GetWindowText(IntPtr hWnd, StringBuilder strText, int maxCount);
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        private static extern int GetWindowTextLength(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        private static extern bool EnumWindows(EnumWindowsProc enumProc, IntPtr lParam);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+
+        public static string GetWindowText(IntPtr hWnd)
+        {
+            int size = GetWindowTextLength(hWnd);
+            if (size++ > 0)
+            {
+                var builder = new StringBuilder(size);
+                GetWindowText(hWnd, builder, builder.Capacity);
+                return builder.ToString();
+            }
+
+            return String.Empty;
+        }
+
+        public static IEnumerable<IntPtr> FindWindowsWithText(string titleText)
+        {
+            IntPtr found = IntPtr.Zero;
+            List<IntPtr> windows = new List<IntPtr>();
+
+            EnumWindows(delegate(IntPtr wnd, IntPtr param)
+            {
+                if (GetWindowText(wnd).Contains(titleText))
+                {
+                    windows.Add(wnd);
+                }
+                return true;
+            },
+                        IntPtr.Zero);
+
+            return windows;
+        }
+
+        public VoliBot(string username, string password, string region, string path)
+        {
+            ipath = path; Accountname = username; Password = password;
             regiona = region;
             connection.OnConnect += new LoLConnection.OnConnectHandler(connection_OnConnect);
             connection.OnDisconnect += new LoLConnection.OnDisconnectHandler(connection_OnDisconnect);
@@ -81,42 +259,60 @@ namespace RitoBot
             connection.OnLogin += new LoLConnection.OnLoginHandler(connection_OnLogin);
             connection.OnLoginQueueUpdate += new LoLConnection.OnLoginQueueUpdateHandler(connection_OnLoginQueueUpdate);
             connection.OnMessageReceived += new LoLConnection.OnMessageReceivedHandler(connection_OnMessageReceived);
-            switch (region)
+        }
+
+        public void Start()
+        {
+            connection = new LoLConnection();
+
+            connection.OnConnect += new LoLConnection.OnConnectHandler(connection_OnConnect);
+            connection.OnDisconnect += new LoLConnection.OnDisconnectHandler(connection_OnDisconnect);
+            connection.OnError += new LoLConnection.OnErrorHandler(connection_OnError);
+            connection.OnLogin += new LoLConnection.OnLoginHandler(connection_OnLogin);
+            connection.OnLoginQueueUpdate += new LoLConnection.OnLoginQueueUpdateHandler(connection_OnLoginQueueUpdate);
+            connection.OnMessageReceived += new LoLConnection.OnMessageReceivedHandler(connection_OnMessageReceived);
+
+            switch (regiona)
             {
                 case "EUW":
-                    connection.Connect(username, password, Region.EUW, "4.20.BlazeIt");
+                    connection.Connect(Accountname, Password, Region.EUW, "4.20.BlazeIt");
                     break;
                 case "EUNE":
-                    connection.Connect(username, password, Region.EUN, "4.20.BlazeIt");
+                    connection.Connect(Accountname, Password, Region.EUN, "4.20.BlazeIt");
                     break;
                 case "BR":
-                    connection.Connect(username, password, Region.BR, "4.20.BlazeIt");
+                    connection.Connect(Accountname, Password, Region.BR, "4.20.BlazeIt");
                     break;
                 case "KR":
-                    connection.Connect(username, password, Region.KR, "4.20.BlazeIt");
+                    connection.Connect(Accountname, Password, Region.KR, "4.20.BlazeIt");
                     break;
                 case "OCE":
-                    connection.Connect(username, password, Region.OCE, "4.20.BlazeIt");
+                    connection.Connect(Accountname, Password, Region.OCE, "4.20.BlazeIt");
                     break;
                 case "NA":
-                    connection.Connect(username, password, Region.NA, "4.20.BlazeIt");
+                    connection.Connect(Accountname, Password, Region.NA, "4.20.BlazeIt");
                     break;
                 case "TR":
-                    connection.Connect(username, password, Region.TR, "4.20.BlazeIt");
+                    connection.Connect(Accountname, Password, Region.TR, "4.20.BlazeIt");
                     break;
                 case "TW":
-                    connection.Connect(username, password, Region.TW, "4.20.BlazeIt");
+                    connection.Connect(Accountname, Password, Region.TW, "4.20.BlazeIt");
                     break;
                 case "RU":
-                    connection.Connect(username, password, Region.RU, "4.20.BlazeIt");
+                    connection.Connect(Accountname, Password, Region.RU, "4.20.BlazeIt");
                     break;
                 case "LAN":
-                    connection.Connect(username, password, Region.LAN, "4.20.BlazeIt");
+                    connection.Connect(Accountname, Password, Region.LAN, "4.20.BlazeIt");
                     break;
                 case "LAS":
-                    connection.Connect(username, password, Region.LAS, "4.20.BlazeIt");
+                    connection.Connect(Accountname, Password, Region.LAS, "4.20.BlazeIt");
                     break;
             }
+        }
+
+        public void Stop()
+        {
+            connection.Disconnect();    
         }
         public async void connection_OnMessageReceived(object sender, object message)
         {
@@ -133,24 +329,22 @@ namespace RitoBot
                             firstTimeInLobby = false;
                             updateStatus("In Champion Select", Accountname);
                             await connection.SetClientReceivedGameMessage(game.Id, "CHAMP_SELECT_CLIENT");
-                            if (queueType != QueueTypes.ARAM)
+                            if (Core.championId != "")
                             {
-                                if (Core.championId != "")
-                                {
-                                    await connection.SelectChampion(Enums.championToId(Core.championId));
-                                    await connection.ChampionSelectCompleted();
-                                }
-                                else
-                                {
-                                    await connection.SelectChampion(availableChampsArray.First(champ => champ.Owned || champ.FreeToPlay).ChampionId);
-                                    await connection.ChampionSelectCompleted();
-                                }
+                                await connection.SelectChampion(Enums.championToId(Core.championId));
+                                await connection.ChampionSelectCompleted();
+                            }
+                            else
+                            {
+                                await connection.SelectChampion(availableChampsArray.First(champ => champ.Owned || champ.FreeToPlay).ChampionId);
+                                await connection.ChampionSelectCompleted();
                             }
                             break;
                         }
                         else
                             break;
                     case "POST_CHAMP_SELECT":
+                        HasLaunchedGame = false;
                         firstTimeInLobby = false;
                         updateStatus("(Post Champ Select)", Accountname);
                         break;
@@ -202,38 +396,25 @@ namespace RitoBot
             {
                 if (message is EndOfGameStats)
                 {
+                    double experienceEarned = ((EndOfGameStats)message).ExperienceEarned;
+                    double experienceTotal = ((EndOfGameStats)message).ExperienceTotal;
                     MatchMakerParams matchParams = new MatchMakerParams();
                     //Set BotParams
-                    if (queueType == QueueTypes.INTRO_BOT)
-                    {
-                        matchParams.BotDifficulty = "INTRO";
-                    }
-                    else if (queueType == QueueTypes.BEGINNER_BOT)
-                    {
-                        matchParams.BotDifficulty = "EASY";
-                    }
-                    else if (queueType == QueueTypes.MEDIUM_BOT)
+                    QueueTypes selectQueueType = QueueTypes.MEDIUM_BOT;
+
+                    if (sumLevel < 5)
                     {
                         matchParams.BotDifficulty = "MEDIUM";
                     }
-                    //Check if is available to join queue.
-                    if (sumLevel == 3 && actualQueueType == QueueTypes.NORMAL_5x5)
+                    else
                     {
-                        queueType = actualQueueType;
+                        selectQueueType = QueueTypes.DOMINION;
                     }
-                    else if (sumLevel == 6 && actualQueueType == QueueTypes.ARAM)
-                    {
-                        queueType = actualQueueType;
-                    }
-                    else if (sumLevel == 7 && actualQueueType == QueueTypes.NORMAL_3x3)
-                    {
-                        queueType = actualQueueType;
-                    }
-                    matchParams.QueueIds = new Int32[1] { (int)queueType };
+                    matchParams.QueueIds = new Int32[1] { (int)selectQueueType };
                     SearchingForMatchNotification m = await connection.AttachToQueue(matchParams);
                     if (m.PlayerJoinFailures == null)
                     {
-                        updateStatus("In Queue: " + queueType.ToString(), Accountname);
+                        updateStatus("In Queue: " + selectQueueType.ToString(), Accountname);
                     }
                     else
                     {
@@ -258,6 +439,18 @@ namespace RitoBot
                 }
             }
         }
+
+
+
+        public delegate void GameLaunchedEventHandler(GameLaunchedEventArgs e);
+
+        public event GameLaunchedEventHandler GameLaunched;
+
+        public bool IsGameLaunchedHandled()
+        {
+            return GameLaunched != null;
+        }
+
         public void LaunchGame(PlayerCredentialsDto CurrentGame)
         {
             ProcessStartInfo startInfo = new ProcessStartInfo();
@@ -266,11 +459,34 @@ namespace RitoBot
             startInfo.FileName = "League of Legends.exe";
             startInfo.Arguments = "\"8394\" \"LoLLauncher.exe\" \"\" \"" + CurrentGame.ServerIp + " " +
                 CurrentGame.ServerPort + " " + CurrentGame.EncryptionKey + " " + CurrentGame.SummonerId + "\"";
-            updateStatus("Playing League of Legends", Accountname);
+            updateStatus("Playing Game", Accountname);
             new Thread(() =>
             {
                 exeProcess = Process.Start(startInfo);
                 while (exeProcess.MainWindowHandle == IntPtr.Zero) { }
+                IntPtr consolehWnd = Process.GetCurrentProcess().MainWindowHandle;
+                RECT consoleRect = new RECT();
+                GetWindowRect(consolehWnd, ref consoleRect);
+                RECT leagueRect = new RECT();
+                List<IntPtr> windows = FindWindowsWithText("League of Legends (TM) Client").ToList();
+
+                if (GameLaunched != null)
+                {
+                    GameLaunched(new GameLaunchedEventArgs() { UserName = Accountname });
+                }
+
+                IntPtr leaguehWnd = IntPtr.Zero;
+                uint processId;
+                foreach (IntPtr hWnd in windows)
+                {
+                    GetWindowThreadProcessId(hWnd, out processId);
+                    if((int)processId == exeProcess.Id)
+                    {
+                        leaguehWnd = hWnd;
+                        GetWindowRect(hWnd, ref leagueRect);
+                    }
+                }
+
                 Thread.Sleep(1000);
             }).Start();
         }
@@ -299,8 +515,15 @@ namespace RitoBot
                     updateStatus("Created Summoner: " + summonerName, Accountname);
                 }
                 sumLevel = loginPacket.AllSummonerData.SummonerLevel.Level;
+                double xp = loginPacket.AllSummonerData.SummonerLevelAndPoints.ExpPoints;
+
+                double totalXP = XP_PER_LEVEL[(int)sumLevel - 1] + xp;
+
                 string sumName = loginPacket.AllSummonerData.Summoner.Name;
                 double sumId = loginPacket.AllSummonerData.Summoner.SumId;
+
+                LevelChanged(new LevelChangedEventArgs() { Level = (int)sumLevel });
+                ExperienceLaunched(new ExperienceLaunchedEventArgs() { Experience = (int)totalXP });
                 rpBalance = loginPacket.RpBalance;
                 if (sumLevel > Core.maxLevel || sumLevel == Core.maxLevel)
                 {
@@ -322,27 +545,6 @@ namespace RitoBot
                     {
                         updateStatus("Couldn't buy RP Boost.\n" + exception, Accountname);
                     }
-                }
-                if (sumLevel < 3.0 && queueType == QueueTypes.NORMAL_5x5)
-                {
-                    this.updateStatus("Need to be Level 3 before NORMAL_5x5 queue.", Accountname);
-                    this.updateStatus("Joins Co-Op vs AI (Beginner) queue until 3", Accountname);
-                    queueType = QueueTypes.BEGINNER_BOT;
-                    actualQueueType = QueueTypes.NORMAL_5x5;
-                }
-                else if (sumLevel < 6.0 && queueType == QueueTypes.ARAM)
-                {
-                    this.updateStatus("Need to be Level 6 before ARAM queue.", Accountname);
-                    this.updateStatus("Joins Co-Op vs AI (Beginner) queue until 6", Accountname);
-                    queueType = QueueTypes.BEGINNER_BOT;
-                    actualQueueType = QueueTypes.ARAM;
-                }
-                else if (sumLevel < 7.0 && queueType == QueueTypes.NORMAL_3x3)
-                {
-                    this.updateStatus("Need to be Level 7 before NORMAL_3x3 queue.", Accountname);
-                    this.updateStatus("Joins Co-Op vs AI (Beginner) queue until 7", Accountname);
-                    queueType = QueueTypes.BEGINNER_BOT;
-                    actualQueueType = QueueTypes.NORMAL_3x3;
                 }
                 if (loginPacket.AllSummonerData.Summoner.ProfileIconId == -1 || loginPacket.AllSummonerData.Summoner.ProfileIconId == 1)
                 {
@@ -405,32 +607,39 @@ namespace RitoBot
         private void connection_OnDisconnect(object sender, EventArgs e)
         {
             Core.connectedAccs -= 1;
-            Console.Title = " Current Connected: " + Core.connectedAccs;
+            //Console.Title = " Current Connected: " + Core.connectedAccs;
             updateStatus("Disconnected", Accountname);
         }
         private void connection_OnConnect(object sender, EventArgs e)
         {
             Core.connectedAccs += 1;
-            Console.Title = " Current Connected: " + Core.connectedAccs;
+            //Console.Title = " Current Connected: " + Core.connectedAccs;
         }
+
+        public delegate void StatusChangedEventHandler(UpdateChangedEventArgs e);
+
+        public event StatusChangedEventHandler UpdateChanged;
+
         private void updateStatus(string status, string accname)
         {
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.Write(string.Concat(new object[3]
-              {
-                (object) "[",
-                (object) DateTime.Now,
-                (object) "] "
-              }));
-            Console.ForegroundColor = ConsoleColor.White;
-            Console.Write(string.Concat(new object[3]
-              {
-                (object) "[",
-                (object) accname,
-                (object) "] "
-              }));
-            Console.Write(status + "\n");
-            
+            Status = status;
+            UpdateChanged(new UpdateChangedEventArgs() { Update = Status });
+            //Console.ForegroundColor = ConsoleColor.Cyan;
+            //Console.Write(string.Concat(new object[3]
+            //  {
+            //    (object) "[",
+            //    (object) DateTime.Now,
+            //    (object) "] "
+            //  }));
+            //Console.ForegroundColor = ConsoleColor.White;
+            //Console.Write(string.Concat(new object[3]
+            //  {
+            //    (object) "[",
+            //    (object) accname,
+            //    (object) "] "
+            //  }));
+            //Console.Write(status + "\n");
+
         }
         private void levelUp()
         {
@@ -467,10 +676,10 @@ namespace RitoBot
                 Console.WriteLine(url);
                 await httpClient.GetStringAsync(url);
 
-                string storeURL = "https://store." + "EUW" + "1.lol.riotgames.com/store/tabs/view/boosts/1";
+                string storeURL = "https://store." + "NA" + "1.lol.riotgames.com/store/tabs/view/boosts/1";
                 await httpClient.GetStringAsync(storeURL);
 
-                string purchaseURL = "https://store." + "EUW" + "1.lol.riotgames.com/store/purchase/item";
+                string purchaseURL = "https://store." + "NA" + "1.lol.riotgames.com/store/purchase/item";
 
                 List<KeyValuePair<string, string>> storeItemList = new List<KeyValuePair<string, string>>();
                 storeItemList.Add(new KeyValuePair<string, string>("item_id", "boosts_2"));
@@ -487,7 +696,7 @@ namespace RitoBot
                 httpClient.Dispose();
             }
             catch (Exception e)
-            {
+            {   
                 Console.WriteLine(e);
             }
         }
@@ -503,5 +712,20 @@ namespace RitoBot
         }
 
         public Thread InjectThread { get; set; }
+
+        public bool IsEventHandlerRegistered(Delegate prospectiveHandler)
+        {
+            if (this.GameLaunched != null)
+            {
+                foreach (Delegate existingHandler in this.GameLaunched.GetInvocationList())
+                {
+                    if (existingHandler == prospectiveHandler)
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
     }
 }
